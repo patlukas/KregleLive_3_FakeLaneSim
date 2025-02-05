@@ -12,9 +12,6 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Set LANG environment variable for UTF-8 encoding
-        run: $env:LANG="en_US.UTF-8"
-
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
@@ -29,7 +26,7 @@ jobs:
         id: get_version
         shell: pwsh
         run: |
-          $NEW_VERSION = python -c "from main import APP_VERSION; print(APP_VERSION)"
+          $NEW_VERSION = python get_version.py
           Write-Host "NEW_VERSION=$NEW_VERSION"
           echo "NEW_VERSION=$NEW_VERSION" >> $env:GITHUB_ENV
 
@@ -87,7 +84,7 @@ jobs:
 
       - name: Create ZIP archive on Windows
         shell: pwsh
-        run: Compress-Archive -Path dist/KL3Sim__${{ env.NEW_VERSION_WITH_BUILD__UNDERSCORED }}.exe, templates, icon -DestinationPath KL3Sim__${{ env.NEW_VERSION_WITH_BUILD__UNDERSCORED }}.zip
+        run: Compress-Archive -Path dist/KL3Sim__${{ env.NEW_VERSION_WITH_BUILD__UNDERSCORED }}.exe, templates -DestinationPath KL3Sim__${{ env.NEW_VERSION_WITH_BUILD__UNDERSCORED }}.zip
 
       - name: Create GitHub Release
         id: create_release
