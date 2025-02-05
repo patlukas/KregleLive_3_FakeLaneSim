@@ -6,7 +6,7 @@ import signal
 import subprocess
 
 COM_PORT = "COM2"
-APP_VERSION = "1.0.2"
+APP_VERSION = "1.0.3"
 INTERVAL = 0.001
 running = True
 running_loop = False
@@ -27,9 +27,21 @@ def init_serial_port():
             )
             return ser
         except serial.serialutil.SerialException:
-            print(f"Port {COM_PORT} jest zajęty, wybierz inny")
+            print(f"\033[41mPort {COM_PORT} jest zajęty, wybierz inny\033[0m")
         except EOFError:
             return None
+
+def print_stat(nr_sent, all_to_send, elapsed_time, color, finished=False):
+    nr_sent += 1
+    if elapsed_time != 0:
+        msg_to_s = nr_sent / elapsed_time
+    else:
+        msg_to_s = 0
+    sys.stdout.write(f"\r                                                                                                 ")
+    sys.stdout.write(f"\r{color}{nr_sent}/{all_to_send}\t\t{nr_sent * 100 / all_to_send:.3f}%\t\t{elapsed_time:.3f}s\t\t{msg_to_s:.1f} message/s")
+    if not finished:
+        sys.stdout.write("\t\tCTRL-C - ends the loop")
+    sys.stdout.write("\033[0m")
 
 def send_messages(serial_port, messages):
     global running_loop
@@ -37,18 +49,17 @@ def send_messages(serial_port, messages):
     start_time = time.time()
     running_loop = True
     for i, message in enumerate(messages):
-        if not running:
-            break
-        if not running_loop:
-            break
+
         serial_port.write(message)
         elapsed_time = time.time() - start_time
-        if elapsed_time != 0:
-            msg_to_s = i / elapsed_time
+        if not running or not running_loop:
+            print_stat(i, length, elapsed_time, "\033[31m", True)
+            break
+        if i == length-1:
+            print_stat(i, length, elapsed_time, "\033[32m", True)
+            break
         else:
-            msg_to_s = 0
-        sys.stdout.write(f"\r                                                                                                 ")
-        sys.stdout.write(f"\r{i}/{length}\t|\t{i * 100 / length:.3f}%\t|\t{elapsed_time:.3f}s\t|\t{msg_to_s:.1f} message/s\t CTRL-C - ends the loop")  # Nadpisanie linii
+            print_stat(i, length, elapsed_time, "\033[33m")
         sys.stdout.flush()
         time.sleep(INTERVAL)
     running_loop = False
@@ -61,10 +72,10 @@ def get_template_files(folder="templates"):
 
 def choose_options(list_options):
     global INTERVAL
-    print(f"[0]\tZmiana interwału wiadomości")
+    print(f"\033[36m[0]\tZmiana interwału wiadomości")
     for i, option in enumerate(list_options):
-        print(f"[{i+1}]\t{option}")
-    a = input("Wybierz numer szablonu: ")
+        print(f"\033[34m[{i+1}]\t{option}")
+    a = input("\033[0mWybierz numer szablonu: ")
     print("\n")
     try:
         a_int = int(a)
@@ -76,12 +87,12 @@ def choose_options(list_options):
             return None
         name = list_options[a_int-1]
         clear_console()
-        print("Wybrano szablon: ", name)
+        print(f"Wybrano szablon: \033[42m{name}\033[0m")
         return name
     except EOFError:
         raise EOFError
     except Exception:
-        print("Wystąpił błąd")
+        print("\033[41mWystąpił błąd\033[0m")
         return None
 
 def load_messages(file_name):
@@ -100,7 +111,7 @@ def exit_handler(signal_received, frame):
     if running_loop:
         running_loop = False
     else:
-        print("\nKończenie programu...")
+        print("\n\033[43mKończenie programu...\033[0m")
         running = False
 
 def main():
