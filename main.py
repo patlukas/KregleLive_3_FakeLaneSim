@@ -10,7 +10,7 @@ running = True
 running_loop = False
 
 def init_serial_port():
-    port = input("Podaj numer portu COM (domyślnie COM2): ") or "COM2"
+    port = input("Podaj numer portu COM (domyslnie COM2): ") or "COM2"
     ser = serial.Serial(
         port=port,
         baudrate=9600,
@@ -104,4 +104,5 @@ def main():
         messages = load_messages("templates/"+chosen_option)
         send_messages(serial_port, messages)
 
-main()
+if __name__ == '__main__':
+    main()
