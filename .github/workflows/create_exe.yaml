@@ -2,7 +2,7 @@ name: Package Application with PyInstaller and create release
 on:
   push:
     branches:
-      - master
+      - test
 jobs:
   build:
     runs-on: windows-latest
@@ -29,6 +29,7 @@ jobs:
         id: get_version
         shell: pwsh
         run: |
+          $OutputEncoding = [System.Text.Encoding]::UTF8 
           $NEW_VERSION = python -c "from main import APP_VERSION; print(APP_VERSION)"
           Write-Host "NEW_VERSION=$NEW_VERSION"
           echo "NEW_VERSION=$NEW_VERSION" >> $env:GITHUB_ENV
