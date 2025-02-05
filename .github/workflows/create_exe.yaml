@@ -12,6 +12,9 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Set LANG environment variable for UTF-8 encoding
+        run: $env:LANG="en_US.UTF-8"
+
       - name: Set up Python
         uses: actions/setup-python@v4
         with:

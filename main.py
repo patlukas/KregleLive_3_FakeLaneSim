@@ -4,7 +4,7 @@ import os
 import sys
 import signal
 
-APP_VERSION = "1.0.0"
+APP_VERSION = "1.0.1"
 INTERVAL = 0.001
 running = True
 running_loop = False
@@ -48,7 +48,7 @@ def get_template_files(folder="templates"):
 
 def choose_options(list_options):
     global INTERVAL
-    print(f"[0]\tZmiena interwału wiadomości, aktualnie jest {INTERVAL}")
+    print(f"[0]\tZmiana interwału wiadomości, aktualnie jest {INTERVAL}")
     for i, option in enumerate(list_options):
         print(f"[{i+1}]\t{option}")
     a = input("Wybierz numer szablonu: ")
