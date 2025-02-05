@@ -104,4 +104,5 @@ def main():
         messages = load_messages("templates/"+chosen_option)
         send_messages(serial_port, messages)
 
-main()
+if __name__ == '__main__':
+    main()
