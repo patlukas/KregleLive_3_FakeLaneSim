@@ -3,20 +3,33 @@ import time
 import os
 import sys
 import signal
+import subprocess
 
-APP_VERSION = "1.0.1"
+COM_PORT = "COM2"
+APP_VERSION = "1.0.2"
 INTERVAL = 0.001
 running = True
 running_loop = False
 
+def clear_console():
+    subprocess.call('clear' if os.name == 'posix' else 'cls', shell=True)
+    print(f"Port: {COM_PORT}\t\tBaudrate: 9600\t\tInterwał wiadomości: {INTERVAL}s\n")
+
 def init_serial_port():
-    port = input("Podaj numer portu COM (domyslnie COM2): ") or "COM2"
-    ser = serial.Serial(
-        port=port,
-        baudrate=9600,
-        timeout=1
-    )
-    return ser
+    global COM_PORT
+    while True:
+        try:
+            COM_PORT = input(f"Podaj numer portu COM (domyslnie {COM_PORT}): ") or COM_PORT
+            ser = serial.Serial(
+                port=COM_PORT,
+                baudrate=9600,
+                timeout=1
+            )
+            return ser
+        except serial.serialutil.SerialException:
+            print(f"Port {COM_PORT} jest zajęty, wybierz inny")
+        except EOFError:
+            return None
 
 def send_messages(serial_port, messages):
     global running_loop
@@ -25,9 +38,9 @@ def send_messages(serial_port, messages):
     running_loop = True
     for i, message in enumerate(messages):
         if not running:
-            return
+            break
         if not running_loop:
-            return
+            break
         serial_port.write(message)
         elapsed_time = time.time() - start_time
         if elapsed_time != 0:
@@ -48,7 +61,7 @@ def get_template_files(folder="templates"):
 
 def choose_options(list_options):
     global INTERVAL
-    print(f"[0]\tZmiana interwału wiadomości, aktualnie jest {INTERVAL}")
+    print(f"[0]\tZmiana interwału wiadomości")
     for i, option in enumerate(list_options):
         print(f"[{i+1}]\t{option}")
     a = input("Wybierz numer szablonu: ")
@@ -59,8 +72,10 @@ def choose_options(list_options):
             i = input(f"Podaj nowy interwał (domyślnie {INTERVAL}): ") or str(INTERVAL)
             i_int = float(i)
             INTERVAL = i_int
+            clear_console()
             return None
         name = list_options[a_int-1]
+        clear_console()
         print("Wybrano szablon: ", name)
         return name
     except EOFError:
@@ -82,18 +97,20 @@ def load_messages(file_name):
 
 def exit_handler(signal_received, frame):
     global running, running_loop
-    print("\n⛔ Otrzymano Ctrl + C")
     if running_loop:
-        print("Przerywanie pętli...")
         running_loop = False
     else:
-        print("Kończenie programu...")
+        print("\nKończenie programu...")
         running = False
 
 def main():
+    subprocess.call('clear' if os.name == 'posix' else 'cls', shell=True)
     signal.signal(signal.SIGINT, exit_handler)
     serial_port = init_serial_port()
+    if serial_port is None:
+        return
     list_templates = get_template_files()
+    clear_console()
     while running:
         try:
             chosen_option = choose_options(list_templates)
