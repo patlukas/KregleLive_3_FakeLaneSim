@@ -4,7 +4,7 @@ import os
 import sys
 import signal
 
-
+APP_VERSION = "1.0.0"
 INTERVAL = 0.001
 running = True
 running_loop = False
