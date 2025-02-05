@@ -6,8 +6,6 @@ on:
 jobs:
   build:
     runs-on: windows-latest
-    env:
-      PYTHONIOENCODING: utf-8
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -28,8 +26,7 @@ jobs:
         id: get_version
         shell: pwsh
         run: |
-          $OutputEncoding = [System.Text.Encoding]::UTF8 
-          $NEW_VERSION = python -c "from main import APP_VERSION; print(APP_VERSION)"
+          $NEW_VERSION = python get_version.py
           Write-Host "NEW_VERSION=$NEW_VERSION"
           echo "NEW_VERSION=$NEW_VERSION" >> $env:GITHUB_ENV
 
