@@ -6,7 +6,7 @@ import signal
 import subprocess
 
 COM_PORT = "COM2"
-APP_VERSION = "1.0.3"
+APP_VERSION = "1.0.4"
 INTERVAL = 0.001
 running = True
 running_loop = False
