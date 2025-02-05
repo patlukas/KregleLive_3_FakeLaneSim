@@ -37,7 +37,7 @@ def print_stat(nr_sent, all_to_send, elapsed_time, color, finished=False):
         msg_to_s = nr_sent / elapsed_time
     else:
         msg_to_s = 0
-    sys.stdout.write(f"\r                                                                                                 ")
+    sys.stdout.write("\r\033[K")
     sys.stdout.write(f"\r{color}{nr_sent}/{all_to_send}\t\t{nr_sent * 100 / all_to_send:.3f}%\t\t{elapsed_time:.3f}s\t\t{msg_to_s:.1f} message/s")
     if not finished:
         sys.stdout.write("\t\tCTRL-C - ends the loop")
