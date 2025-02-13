@@ -1,9 +1,13 @@
+import random
+
 import serial
 import time
 import os
 import sys
 import signal
 import subprocess
+from datetime import datetime
+
 
 COM_PORT = "COM2"
 APP_VERSION = "1.0.4"
@@ -70,11 +74,128 @@ def get_template_files(folder="templates"):
         return []
     return [f for f in os.listdir(folder) if os.path.isfile(os.path.join(folder, f))]
 
+def send_msg(serial_port, body_msg):
+    checksum = get_check_sum(body_msg)
+    msg = body_msg + checksum + b"\r"
+    serial_port.write(msg)
+    return msg
+
+def generate_new_throw(lane_state):
+    throw_int = int(lane_state["throw"], 16) + 1
+    if throw_int > lane_state["throw_limit"]:
+        m = lane_state["mode"]
+        lane_state["mode"] = 0
+        return m
+    throw_result = random.randint(0, 9)
+    lane_sum_int = int(lane_state["lane_sum"], 16) + throw_result
+    total_sum_int = int(lane_state["total_sum"], 16) + throw_result
+    empty_throw_int = int(lane_state["lane_sum"], 16) + (1 if throw_result == 0 else 0)
+    time_int = int(lane_state["time"], 16)
+    if time_int > 0:
+        time_int -= 1
+    lane_state["throw"] = bytes(format(throw_int, '03X'), 'utf-8')
+    lane_state["throw_result"] = bytes(format(throw_result, '03X'), 'utf-8')
+    lane_state["lane_sum"] = bytes(format(lane_sum_int, '03X'), 'utf-8')
+    lane_state["total_sum"] = bytes(format(total_sum_int, '03X'), 'utf-8')
+    lane_state["empty_throw"] = bytes(format(empty_throw_int, '03X'), 'utf-8')
+    lane_state["time"] = bytes(format(time_int, '03X'), 'utf-8')
+    return 0
+
+def interactive_mode(serial_port):
+    global running_loop
+    running_loop = True
+    lane_state = []
+    number_of_lane = 6
+    for i in range(number_of_lane):
+        lane_state.append({
+            "throw_limit": 0,
+            "time": b"285",
+            "mode": 0, #0 - no mode, 1 - probe, 2 - normal game
+            "throw": b"000",
+            "throw_result": b"000",
+            "lane_sum": b"000",
+            "total_sum": b"000",
+            "empty_throw": b"000"
+        })
+    while True:
+        if not running or not running_loop:
+            break
+        msgs = serial_port.read(1024)
+        for msg in msgs.split(b"\r"):
+            if msg == b"":
+                continue
+            head = msg[2:4] + msg[0:2]
+            lane_number = int(msg[1:2])
+            body = b""
+            if msg[4:5] == b"S":
+                body = b"s100000FF"
+            elif len(msg) == 6:
+                l = lane_state[lane_number]
+                lane_time = l["time"]
+                if l["mode"] == 0:
+                    body = lane_time
+                else:
+                    mode_end = generate_new_throw(l)
+                    if mode_end > 0:
+                        if mode_end == 1:
+                            body = b"p0"
+                        else:
+                            body = b"i0"
+                    else:
+                        throw = l["throw"]
+                        throw_result = l["throw_result"]
+                        lane_sum = l["lane_sum"]
+                        total_sum = l["total_sum"]
+                        empty_throw = l["empty_throw"]
+                        body = b"w" + throw + throw_result + lane_sum + total_sum + b"000" + empty_throw + lane_time + b"000000"
+            elif msg[4:6] == b"IG":
+                lane_state[lane_number] = {
+                    "throw_limit": int(msg[6:9], 16) + int(msg[9:12], 16),
+                    "time": msg[12:15],
+                    "mode": 2,
+                    "throw": b"000",
+                    "throw_result": b"000",
+                    "lane_sum": b"000",
+                    "total_sum": msg[15:18],
+                    "empty_throw": msg[18:21]
+                }
+                body = b"i1"
+            elif msg[4:5] == b"P":
+                lane_state[lane_number] = {
+                    "throw_limit": int(msg[5:8], 16),
+                    "time": msg[8:11],
+                    "mode": 1,
+                    "throw": b"000",
+                    "throw_result": b"000",
+                    "lane_sum": b"000",
+                    "total_sum": b"000",
+                    "empty_throw": b"000"
+                }
+                body = b"p1"
+            elif msg[4:5] == b"M":
+                body = lane_state[lane_number]["time"]
+            elif msg[4:5] == b"E":
+                body = lane_state[lane_number]["time"]
+            elif msg[4:5] == b"U":
+                body = lane_state[lane_number]["time"]
+            else:
+                print(f"{datetime.now().strftime("%H:%M:%S %f")[:-3]} | \t[????????????????????????????????????????????]: {msg}")
+                continue
+            msg_sent = send_msg(serial_port, head + body)
+            print(f"{datetime.now().strftime("%H:%M:%S %f")[:-3]} | \t<-- {msg} \t | --> {msg_sent}")
+
+def get_check_sum(message: bytes) -> bytes:
+    sum_ascii = 0
+    for x in message:
+        sum_ascii += x
+    return bytes(hex(sum_ascii).split("x")[-1].upper()[-2:], 'utf-8')
+
 def choose_options(list_options):
     global INTERVAL
     print(f"\033[36m[0]\tZmiana interwału wiadomości")
+    print(f"\033[36m[1]\tInteraktwny tryb [Odpowiadanie serwerowi]")
     for i, option in enumerate(list_options):
-        print(f"\033[34m[{i+1}]\t{option}")
+        print(f"\033[34m[{i+2}]\t{option}")
     a = input("\033[0mWybierz numer szablonu: ")
     print("\n")
     try:
@@ -85,7 +206,9 @@ def choose_options(list_options):
             INTERVAL = i_int
             clear_console()
             return None
-        name = list_options[a_int-1]
+        if a_int == 1:
+            return 1
+        name = list_options[a_int-2]
         clear_console()
         print(f"Wybrano szablon: \033[42m{name}\033[0m")
         return name
@@ -129,8 +252,11 @@ def main():
             continue
         if chosen_option is None:
             continue
-        messages = load_messages("templates/"+chosen_option)
-        send_messages(serial_port, messages)
+        if isinstance(chosen_option, str):
+            messages = load_messages("templates/"+chosen_option)
+            send_messages(serial_port, messages)
+        if chosen_option == 1:
+            interactive_mode(serial_port)
 
 if __name__ == '__main__':
     main()
