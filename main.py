@@ -10,7 +10,7 @@ from datetime import datetime
 
 
 COM_PORT = "COM2"
-APP_VERSION = "1.0.4"
+APP_VERSION = "1.0.5"
 INTERVAL = 0.001
 running = True
 running_loop = False
@@ -53,7 +53,6 @@ def send_messages(serial_port, messages):
     start_time = time.time()
     running_loop = True
     for i, message in enumerate(messages):
-
         serial_port.write(message)
         elapsed_time = time.time() - start_time
         if not running or not running_loop:
@@ -83,9 +82,9 @@ def send_msg(serial_port, body_msg):
 def generate_new_throw(lane_state):
     throw_int = int(lane_state["throw"], 16) + 1
     if throw_int > lane_state["throw_limit"]:
-        m = lane_state["mode"]
+        last_mode = lane_state["mode"]
         lane_state["mode"] = 0
-        return m
+        return last_mode
     throw_result = random.randint(0, 9)
     lane_sum_int = int(lane_state["lane_sum"], 16) + throw_result
     total_sum_int = int(lane_state["total_sum"], 16) + throw_result
@@ -120,7 +119,10 @@ def interactive_mode(serial_port):
     while True:
         if not running or not running_loop:
             break
-        msgs = serial_port.read(1024)
+        number_of_waiting_bytes = serial_port.in_waiting
+        if number_of_waiting_bytes == 0:
+            continue
+        msgs = serial_port.read(number_of_waiting_bytes)
         for msg in msgs.split(b"\r"):
             if msg == b"":
                 continue
@@ -177,6 +179,8 @@ def interactive_mode(serial_port):
             elif msg[4:5] == b"E":
                 body = lane_state[lane_number]["time"]
             elif msg[4:5] == b"U":
+                body = lane_state[lane_number]["time"]
+            elif msg[4:5] == b"T":
                 body = lane_state[lane_number]["time"]
             else:
                 print(f"{datetime.now().strftime("%H:%M:%S %f")[:-3]} | \t[????????????????????????????????????????????]: {msg}")
